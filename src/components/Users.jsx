@@ -10,7 +10,6 @@ import {
   TableRow,
   Typography,
   CircularProgress,
-  Alert,
   Container
 } from '@mui/material';
 import axios from 'axios';
@@ -24,16 +23,11 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/users', {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/users');
         
-        // Check if response has data and success is true
+        // The API returns data in {success: true, data: [...]} format
         if (response.data && response.data.success) {
-          setUsers(response.data.data || []);
+          setUsers(response.data.data);
           setError(null);
         } else {
           throw new Error('Failed to fetch users');
@@ -75,8 +69,8 @@ const Users = () => {
       top: '50%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      marginLeft: '120px', // Half of sidebar width to offset centering
-      mt: -4 // Adjust for header
+      marginLeft: '120px',
+      mt: -4
     }}>
       <Container maxWidth="lg" sx={{ 
         display: 'flex',
@@ -148,9 +142,9 @@ const Users = () => {
                         }
                       }}
                     >
-                      <TableCell>{user.fullName || 'N/A'}</TableCell>
-                      <TableCell>{user.email || 'N/A'}</TableCell>
-                      <TableCell>{user.mobile || 'N/A'}</TableCell>
+                      <TableCell>{user.fullName}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.mobile}</TableCell>
                       <TableCell>{user.address || 'N/A'}</TableCell>
                     </TableRow>
                   ))
