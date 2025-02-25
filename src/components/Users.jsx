@@ -12,6 +12,17 @@ import {
   CircularProgress,
   Container
 } from '@mui/material';
+import axios from 'axios';
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: 'https://boldservebackend-production.up.railway.app',
+  timeout: 10000,
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  }
+});
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -24,40 +35,40 @@ const Users = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('https://boldservebackend-production.up.railway.app/api/users', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          },
-          mode: 'cors',
-          credentials: 'omit'
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        // Get token from localStorage if it exists
+        const token = localStorage.getItem('token');
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         }
 
-        const result = await response.json();
-        console.log('API Response:', result);
+        const response = await api.get('/api/users');
+        console.log('API Response:', response.data);
 
-        // Check for the correct data structure
-        if (result && result.data && Array.isArray(result.data)) {
-          setUsers(result.data);
-        } else if (Array.isArray(result)) {
-          setUsers(result);
+        if (response.data && Array.isArray(response.data)) {
+          setUsers(response.data);
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          setUsers(response.data.data);
         } else {
           throw new Error('Invalid data format received');
         }
 
       } catch (error) {
-        console.error('Fetch error details:', {
+        console.error('API Error:', {
           message: error.message,
-          stack: error.stack,
-          response: error.response
+          response: error.response?.data,
+          status: error.response?.status
         });
-        setError('Unable to load user data. Please try again.');
+        
+        if (error.response?.status === 401) {
+          setError('Authentication required. Please login again.');
+        } else if (error.response?.status === 403) {
+          setError('You do not have permission to view this data.');
+        } else if (error.code === 'ECONNABORTED') {
+          setError('Request timed out. Please check your connection.');
+        } else {
+          setError('Unable to load user data. Please try again.');
+        }
+        
         setUsers([]);
       } finally {
         setLoading(false);
@@ -65,12 +76,6 @@ const Users = () => {
     };
 
     fetchUsers();
-
-    // Cleanup function
-    return () => {
-      setUsers([]);
-      setError(null);
-    };
   }, []);
 
   // Loading state
@@ -189,7 +194,7 @@ const Users = () => {
                             {error}
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
-                            If the problem persists, please contact support.
+                            Please try refreshing the page or contact support if the issue persists.
                           </Typography>
                         </Box>
                       ) : (
