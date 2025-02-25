@@ -23,27 +23,34 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios({
-          method: 'GET',
-          url: 'https://boldservebackend-production.up.railway.app/api/users',
+        // Create axios instance with default config
+        const axiosInstance = axios.create({
+          baseURL: 'https://boldservebackend-production.up.railway.app',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-          }
+            'Access-Control-Allow-Origin': '*',
+            'Authorization': `Bearer ${localStorage.getItem('token')}` // Add token if you have it
+          },
+          withCredentials: false // Important for CORS
         });
 
-        console.log('API Response:', response.data); // For debugging
+        const response = await axiosInstance.get('/api/users');
+        console.log('API Response:', response); // Debug log
 
-        if (response.data && response.data.success) {
+        if (response.data && Array.isArray(response.data)) {
+          setUsers(response.data);
+          setError(null);
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
           setUsers(response.data.data);
           setError(null);
         } else {
-          throw new Error('Failed to fetch users');
+          throw new Error('Invalid data format received');
         }
       } catch (error) {
-        console.error('Error details:', error);
-        setError('Failed to load users. Please try again later.');
-        setUsers([]); // Reset users on error
+        console.error('Error fetching users:', error.response || error);
+        setError(error.response?.data?.message || 'Failed to load users. Please try again later.');
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -66,9 +73,6 @@ const Users = () => {
       </Box>
     );
   }
-
-  // Check if we have users data
-  const hasUsers = Array.isArray(users) && users.length > 0;
 
   return (
     <Box sx={{
@@ -142,10 +146,10 @@ const Users = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {hasUsers ? (
+                {users && users.length > 0 ? (
                   users.map((user) => (
                     <TableRow 
-                      key={user._id}
+                      key={user._id || index}
                       sx={{
                         transition: 'all 0.3s ease',
                         '&:hover': {
@@ -154,9 +158,9 @@ const Users = () => {
                         }
                       }}
                     >
-                      <TableCell>{user.fullName}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.mobile}</TableCell>
+                      <TableCell>{user.fullName || 'N/A'}</TableCell>
+                      <TableCell>{user.email || 'N/A'}</TableCell>
+                      <TableCell>{user.mobile || 'N/A'}</TableCell>
                       <TableCell>{user.address || 'N/A'}</TableCell>
                     </TableRow>
                   ))
