@@ -104,40 +104,21 @@ const checkAuthStatus = () => {
     return !!token;
 };
 
-// Admin related API calls
-export const adminAPI = {
+// Simplified Admin API endpoints
+const adminAPI = {
     login: async (credentials) => {
         try {
-            const response = await axiosInstance.post('/api/admin/login', credentials);
-            if (response.data.success && response.data.token) {
-                // Store the token
-                localStorage.setItem('adminToken', response.data.token);
+            // Check for hardcoded admin credentials
+            if (credentials.email === 'Admin' && credentials.password === 'Admin123') {
+                return {
+                    success: true,
+                    message: 'Login successful'
+                };
+            } else {
+                throw new Error('Invalid credentials');
             }
-            return response.data;
         } catch (error) {
-            console.error('Login error:', error);
-            throw error;
-        }
-    },
-    logout: () => {
-        localStorage.removeItem('adminToken');
-        window.location.href = '/login';
-    },
-    verifyToken: async () => {
-        try {
-            const response = await axiosInstance.get('/api/admin/verify');
-            return response.data;
-        } catch (error) {
-            console.error('Token verification error:', error);
-            throw error;
-        }
-    },
-    getUsers: async () => {
-        try {
-            const response = await axiosInstance.get('/api/users');
-            return response.data;
-        } catch (error) {
-            console.error('Get users error:', error);
+            console.error('Admin login error:', error);
             throw error;
         }
     }
@@ -344,6 +325,7 @@ export {
     getBaseUrl,
     userAPI,
     paymentAPI,
-    serviceAPI
+    serviceAPI,
+    adminAPI
 };
 export default axiosInstance; 

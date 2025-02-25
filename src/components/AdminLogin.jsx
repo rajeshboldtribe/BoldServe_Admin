@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
 import {
   Container,
   Box,
@@ -19,8 +18,6 @@ import {
   AdminPanelSettings,
 } from '@mui/icons-material';
 import { styled, keyframes } from '@mui/material/styles';
-import { setToken } from '../redux/slices/authSlice';
-import axios from 'axios';
 
 // Animation keyframes
 const fadeIn = keyframes`
@@ -58,38 +55,34 @@ const StyledButton = styled(Button)(({ theme }) => ({
 }));
 
 const AdminLogin = ({ setIsAuthenticated }) => {
-  const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
+  const [credentials, setCredentials] = useState({
+    userId: '',
+    password: ''
+  });
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await axios.post('http://localhost:8003/api/admin/login', {
-        userId,
-        password
-      });
-
-      if (response.data.success && response.data.token) {
-        const token = response.data.token.startsWith('Bearer ')
-          ? response.data.token
-          : `Bearer ${response.data.token}`;
-        
-        localStorage.setItem('adminToken', token);
-        dispatch(setToken(token));
+      // Simple credential check
+      if (credentials.userId === 'Admin' && credentials.password === 'Admin123') {
+        // Successful login
+        localStorage.setItem('isAdminLoggedIn', 'true');
         setIsAuthenticated(true);
         navigate('/');
+      } else {
+        setError('Invalid credentials');
+        setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.response?.data?.message || 'Login failed');
+      setError('Invalid credentials');
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
@@ -131,14 +124,17 @@ const AdminLogin = ({ setIsAuthenticated }) => {
               required
               fullWidth
               id="userId"
-              label="User ID"
+              label="Admin ID"
               name="userId"
               autoComplete="username"
               autoFocus
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              value={credentials.userId}
+              onChange={(e) => setCredentials({
+                ...credentials,
+                userId: e.target.value
+              })}
               sx={{ mb: 2 }}
-              placeholder="Enter admin user ID (default: Admin)"
+              placeholder="Enter admin user ID (Admin)"
             />
             <TextField
               margin="normal"
@@ -149,9 +145,12 @@ const AdminLogin = ({ setIsAuthenticated }) => {
               type={showPassword ? 'text' : 'password'}
               id="password"
               autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password (default: Admin123)"
+              value={credentials.password}
+              onChange={(e) => setCredentials({
+                ...credentials,
+                password: e.target.value
+              })}
+              placeholder="Enter password (Admin123)"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
