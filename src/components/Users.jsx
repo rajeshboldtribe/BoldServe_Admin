@@ -23,33 +23,29 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        // Create axios instance with default config
-        const axiosInstance = axios.create({
-          baseURL: 'https://boldservebackend-production.up.railway.app',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Authorization': `Bearer ${localStorage.getItem('token')}` // Add token if you have it
-          },
-          withCredentials: false // Important for CORS
-        });
+        setError(null); // Reset error state
 
-        const response = await axiosInstance.get('/api/users');
-        console.log('API Response:', response); // Debug log
+        // Simple GET request without additional configuration
+        const response = await fetch('https://boldservebackend-production.up.railway.app/api/users');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('API Response:', data); // Debug log
 
-        if (response.data && Array.isArray(response.data)) {
-          setUsers(response.data);
-          setError(null);
-        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          setUsers(response.data.data);
-          setError(null);
+        if (data && Array.isArray(data)) {
+          setUsers(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          setUsers(data.data);
         } else {
           throw new Error('Invalid data format received');
         }
+
       } catch (error) {
-        console.error('Error fetching users:', error.response || error);
-        setError(error.response?.data?.message || 'Failed to load users. Please try again later.');
+        console.error('Fetch error:', error);
+        setError('Failed to load users. Please try again later.');
         setUsers([]);
       } finally {
         setLoading(false);
@@ -167,7 +163,15 @@ const Users = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} align="center">
-                      {error || 'No users found'}
+                      {error ? (
+                        <Typography color="error">
+                          {error}
+                          <br />
+                          <small>Please check the network connection or try refreshing the page.</small>
+                        </Typography>
+                      ) : (
+                        'No users found'
+                      )}
                     </TableCell>
                   </TableRow>
                 )}
