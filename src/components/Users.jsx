@@ -147,7 +147,7 @@ const Users = () => {
               </TableHead>
               <TableBody>
                 {users && users.length > 0 ? (
-                  users.map((user) => (
+                  users.map((user, index) => (
                     <TableRow 
                       key={user._id || index}
                       sx={{
