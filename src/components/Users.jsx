@@ -1,210 +1,197 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import {
+  Box,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Box,
-  Container,
-  Card,
-  CardContent,
   Typography,
-  Alert,
-  Button,
   CircularProgress,
-  Tooltip,
-  IconButton,
-  styled
+  Alert,
+  Container
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import { userAPI } from '../utils/axios';  // Make sure to import userAPI
-
-// Create styled component for main content
-const MainContent = styled(Box)(({ theme }) => ({
-  flexGrow: 1,
-  padding: theme.spacing(3),
-  marginLeft: '240px', // Width of the sidebar
-  width: 'calc(100% - 240px)', // Adjust width accounting for sidebar
-  minHeight: '100vh',
-  backgroundColor: theme.palette.background.default,
-  [theme.breakpoints.down('sm')]: {
-    marginLeft: 0,
-    width: '100%',
-  },
-}));
-
-// Style the table cells
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  padding: theme.spacing(2),
-  '&.MuiTableCell-head': {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.common.white,
-    fontWeight: 'bold',
-  },
-}));
-
-// Add this constant at the top of your file
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://boldservebackend-production.up.railway.app'
-  : 'http://localhost:8003';
+import axios from 'axios';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      console.log('Fetching users...');
-      const response = await axios.get(`${API_BASE_URL}/api/users`);
-      
-      console.log('Raw API Response:', response);
-
-      if (response.data && response.data.success && Array.isArray(response.data.data)) {
-        setUsers(response.data.data);
-      } else {
-        console.error('Invalid response format:', response.data);
-        throw new Error('Invalid data format received');
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError(error.response?.data?.message || 'Failed to fetch users. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/users');
+        
+        if (response.data && response.data.success) {
+          setUsers(response.data.data);
+        } else {
+          throw new Error('Failed to fetch users');
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setError('Failed to load users. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchUsers();
   }, []);
 
   if (loading) {
     return (
-      <MainContent>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
-          <CircularProgress />
-        </Box>
-      </MainContent>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        width: '100%'
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3, width: '100%' }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
     );
   }
 
   return (
-    <MainContent>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Card sx={{ 
-          borderRadius: 2, 
-          boxShadow: 3,
-          backgroundColor: 'background.paper'
-        }}>
-          <CardContent>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-              <Typography 
-                variant="h5" 
-                component="h1" 
-                fontWeight="bold" 
-                color="primary"
-                sx={{ pl: 1 }}
-              >
-                Users List ({users.length})
-              </Typography>
-              <Tooltip title="Refresh users">
-                <IconButton 
-                  onClick={fetchUsers} 
-                  color="primary"
-                  sx={{ mr: 1 }}
+    <Box sx={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: '90%',
+      maxWidth: '1200px',
+      marginLeft: '120px',
+    }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4,
+          borderRadius: 2,
+          maxHeight: '80vh',
+          overflow: 'hidden'
+        }}
+      >
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            mb: 4,
+            color: '#2193b0', 
+            fontWeight: 600,
+            textAlign: 'center',
+            fontSize: '1.5rem'
+          }}
+        >
+          Registered Users
+        </Typography>
+        
+        <TableContainer sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          <Table stickyHeader size="medium">
+            <TableHead>
+              <TableRow>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    background: '#f5f5f5',
+                    fontSize: '1rem',
+                    padding: '16px'
+                  }}
                 >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            {error && (
-              <Alert 
-                severity="error" 
-                action={
-                  <Button color="inherit" size="small" onClick={fetchUsers}>
-                    RETRY
-                  </Button>
-                }
-                sx={{ mb: 3, mx: 2 }}
-              >
-                {error}
-              </Alert>
-            )}
-
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
-                borderRadius: 1,
-                mx: 2,
-                width: 'auto',
-                overflow: 'hidden',
-                '& .MuiTable-root': {
-                  borderCollapse: 'separate',
-                  borderSpacing: '0 4px'
-                }
-              }}
-            >
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <StyledTableCell>ID</StyledTableCell>
-                    <StyledTableCell>Name</StyledTableCell>
-                    <StyledTableCell>Email</StyledTableCell>
-                    <StyledTableCell>Mobile</StyledTableCell>
-                    <StyledTableCell>Address</StyledTableCell>
+                  ID
+                </TableCell>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    background: '#f5f5f5',
+                    fontSize: '1rem',
+                    padding: '16px'
+                  }}
+                >
+                  Email
+                </TableCell>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    background: '#f5f5f5',
+                    fontSize: '1rem',
+                    padding: '16px'
+                  }}
+                >
+                  Name
+                </TableCell>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    background: '#f5f5f5',
+                    fontSize: '1rem',
+                    padding: '16px'
+                  }}
+                >
+                  Mobile
+                </TableCell>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    background: '#f5f5f5',
+                    fontSize: '1rem',
+                    padding: '16px'
+                  }}
+                >
+                  Address
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <TableRow 
+                    key={user._id}
+                    sx={{
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(33, 147, 176, 0.1)',
+                        transform: 'scale(1.01)'
+                      },
+                      '& .MuiTableCell-root': {
+                        fontSize: '0.95rem',
+                        padding: '16px'
+                      }
+                    }}
+                  >
+                    <TableCell>{user._id || 'N/A'}</TableCell>
+                    <TableCell>{user.email || 'N/A'}</TableCell>
+                    <TableCell>{user.fullName || 'N/A'}</TableCell>
+                    <TableCell>{user.mobile || 'N/A'}</TableCell>
+                    <TableCell>{user.address || 'N/A'}</TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {users.length > 0 ? (
-                    users.map((user) => (
-                      <TableRow 
-                        key={user._id}
-                        hover
-                        sx={{
-                          '&:hover': {
-                            backgroundColor: 'action.hover',
-                            transition: 'background-color 0.2s'
-                          }
-                        }}
-                      >
-                        <TableCell sx={{ fontWeight: 'medium' }}>{user._id}</TableCell>
-                        <TableCell>{user.fullName}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.mobile || 'N/A'}</TableCell>
-                        <TableCell>{user.address || 'N/A'}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell 
-                        colSpan={5} 
-                        align="center" 
-                        sx={{ 
-                          py: 8,
-                          color: 'text.secondary'
-                        }}
-                      >
-                        <Typography variant="body1">
-                          No users found
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-      </Container>
-    </MainContent>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell 
+                    colSpan={5} 
+                    align="center"
+                    sx={{ fontSize: '1rem', padding: '20px' }}
+                  >
+                    No users found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Box>
   );
 };
 

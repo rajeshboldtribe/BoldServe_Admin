@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   FormControl,
@@ -14,10 +14,16 @@ import {
   ListItemText,
   Typography,
   Grid,
+  CircularProgress,
+  Container,
+  Paper,
 } from '@mui/material';
 import { categoriesWithSubs } from '../utils/categories';
 import { serviceAPI } from '../utils/axios'; // Make sure you have axios configured
 import axios from 'axios';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import styled from '@emotion/styled';
+import { styled as muiStyled } from '@mui/material/styles';
 
 const VALID_CATEGORIES = {
   'Office Stationaries': [
@@ -30,6 +36,29 @@ const VALID_CATEGORIES = {
   ]
 };
 
+const StyledPaper = styled(Paper)({
+  padding: '32px',
+  marginTop: '32px',
+  borderRadius: '16px',
+  maxHeight: '75vh',
+  minHeight: '500px',
+  overflowY: 'auto',
+  '&::-webkit-scrollbar': {
+    width: '8px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: '#f1f1f1',
+    borderRadius: '4px',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: '#2193b0',
+    borderRadius: '4px',
+    '&:hover': {
+      background: '#1c7a94',
+    },
+  },
+});
+
 const Services = () => {
   const [formData, setFormData] = useState({
     category: '',
@@ -41,6 +70,7 @@ const Services = () => {
     review: '',
     rating: '',
     images: new Array(6).fill(null), // Changed to 6 slots
+    imageUrl: ''
   });
 
   const [snackbar, setSnackbar] = useState({
@@ -48,6 +78,9 @@ const Services = () => {
     message: '',
     severity: 'success'
   });
+
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleCategoryChange = (event) => {
     setFormData({ 
@@ -120,6 +153,8 @@ const Services = () => {
             console.log(key, ':', value);
         }
 
+        setLoading(true);
+
         const response = await axios.post(
             'http://localhost:8003/api/services',
             serviceData,
@@ -153,8 +188,11 @@ const Services = () => {
                 offers: '',
                 review: '',
                 rating: '',
-                images: new Array(6).fill(null)
+                images: new Array(6).fill(null),
+                imageUrl: ''
             });
+
+            setSuccess(true);
         }
 
     } catch (error) {
@@ -169,6 +207,8 @@ const Services = () => {
             message: error.response?.data?.message || 'Error creating service. Please check all required fields.',
             severity: 'error'
         });
+    } finally {
+        setLoading(false);
     }
 };
 
@@ -190,259 +230,313 @@ const validateForm = () => {
 };
 
 // Add this to your JSX before the submit button
-const renderValidationErrors = () => {
-    const errors = validateForm();
-    if (errors.length > 0) {
-        return (
-            <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
-                <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    {errors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                    ))}
-                </ul>
-            </Alert>
-        );
-    }
-    return null;
-};
+// const renderValidationErrors = () => {
+//     const errors = validateForm();
+//     if (errors.length > 0) {
+//         return (
+//             <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
+//                 <ul style={{ margin: 0, paddingLeft: 20 }}>
+//                     {errors.map((error, index) => (
+//                         <li key={index}>{error}</li>
+//                     ))}
+//                 </ul>
+//             </Alert>
+//         );
+//     }
+//     return null;
+// };
 
   return (
-    <Box
-      sx={{
-        marginLeft: '240px',
-        padding: '24px',
-        minHeight: '100vh',
-        backgroundColor: '#f5f7fa',
-      }}
-    >
-      <Box 
-        component="form" 
-        onSubmit={handleSubmit} 
-        sx={{ 
-          maxWidth: 600, 
-          mx: 'auto', 
-          mt: 4,
-          backgroundColor: 'white',
-          padding: 3,
-          borderRadius: 2,
-          boxShadow: 1,
-        }}
-      >
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Category</InputLabel>
-          <Select
-            value={formData.category}
-            onChange={handleCategoryChange}
-            label="Category"
-          >
-            {Object.keys(categoriesWithSubs).map((category) => (
-              <MenuItem key={category} value={category}>
-                {category}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Sub Category</InputLabel>
-          <Select
-            value={formData.subCategory}
-            onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
-            label="Sub Category"
-            disabled={!formData.category} // Disable if no category selected
-          >
-            {formData.category && categoriesWithSubs[formData.category].map((subCategory) => (
-              <MenuItem key={subCategory} value={subCategory}>
-                {subCategory}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <TextField
-          fullWidth
-          label="Product Name"
-          sx={{ mb: 2 }}
-          value={formData.productName}
-          onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-        />
-
-        <TextField
-          fullWidth
-          label="Price (INR)"
-          type="number"
-          sx={{ mb: 2 }}
-          value={formData.price}
-          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-          InputProps={{
-            startAdornment: '₹',
-          }}
-        />
-
-        <TextField
-          fullWidth
-          label="Description"
-          multiline
-          rows={4}
-          sx={{ mb: 2 }}
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-        />
-
-        <TextField
-          fullWidth
-          label="Offers"
-          sx={{ mb: 2 }}
-          value={formData.offers}
-          onChange={(e) => setFormData({ ...formData, offers: e.target.value })}
-        />
-
-        <TextField
-          fullWidth
-          label="Review"
-          sx={{ mb: 2 }}
-          value={formData.review}
-          onChange={(e) => setFormData({ ...formData, review: e.target.value })}
-        />
-
-        <TextField
-          fullWidth
-          label="Rating"
-          type="number"
-          inputProps={{ min: 0, max: 5, step: 0.1 }}
-          sx={{ mb: 2 }}
-          value={formData.rating}
-          onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-        />
-
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Upload Additional Images (Max 6)
+    <Box sx={{ 
+      width: '100%',
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: '20px',
+      minHeight: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      mt: 4,
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      marginLeft: '120px',
+    }}>
+      <Container maxWidth="md" sx={{ 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <StyledPaper elevation={3} sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          width: '100%'
+        }}>
+          <Typography variant="h5" gutterBottom sx={{ color: '#2193b0', fontWeight: 600 }}>
+            Add New Service
           </Typography>
-          
-          <Grid container spacing={2}>
-            {formData.images.map((image, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Box
-                  sx={{
-                    border: '1px dashed #ccc',
-                    borderRadius: 1,
-                    p: 2,
-                    mb: 2,
-                    position: 'relative',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column'
+
+          {/* {renderValidationErrors()} */}
+
+          <form onSubmit={handleSubmit} style={{ flex: 1, width: '100%' }}>
+            <Grid container spacing={3} sx={{ height: '100%' }}>
+              <Grid item xs={12}>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={formData.category}
+                    onChange={handleCategoryChange}
+                    label="Category"
+                  >
+                    {Object.keys(categoriesWithSubs).map((category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Sub Category</InputLabel>
+                  <Select
+                    value={formData.subCategory}
+                    onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                    label="Sub Category"
+                    disabled={!formData.category}
+                  >
+                    {formData.category && categoriesWithSubs[formData.category].map((subCategory) => (
+                      <MenuItem key={subCategory} value={subCategory}>
+                        {subCategory}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Product Name"
+                  sx={{ mb: 2 }}
+                  value={formData.productName}
+                  onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Price (INR)"
+                  type="number"
+                  sx={{ mb: 2 }}
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  InputProps={{
+                    startAdornment: '₹',
                   }}
-                >
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Image {index + 1}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={4}
+                  sx={{ mb: 2 }}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Offers"
+                  sx={{ mb: 2 }}
+                  value={formData.offers}
+                  onChange={(e) => setFormData({ ...formData, offers: e.target.value })}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Review"
+                  sx={{ mb: 2 }}
+                  value={formData.review}
+                  onChange={(e) => setFormData({ ...formData, review: e.target.value })}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Rating"
+                  type="number"
+                  inputProps={{ min: 0, max: 5, step: 0.1 }}
+                  sx={{ mb: 2 }}
+                  value={formData.rating}
+                  onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Image URL"
+                  sx={{ mb: 2 }}
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Upload Additional Images (Max 6)
                   </Typography>
                   
-                  {image ? (
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="body2" noWrap>
-                        {image.name}
-                      </Typography>
-                      <Box sx={{ mt: 1, flex: 1, position: 'relative' }}>
-                        <img
-                          src={URL.createObjectURL(image)}
-                          alt={`Preview ${index + 1}`}
-                          style={{
-                            width: '100%',
-                            height: '120px',
-                            objectFit: 'cover',
-                            borderRadius: '4px'
-                          }}
-                        />
-                      </Box>
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={handleClearImage(index)}
-                        sx={{ mt: 1 }}
-                      >
-                        Remove
-                      </Button>
-                    </Box>
-                  ) : (
-                    <Box sx={{ 
-                      flex: 1, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center' 
-                    }}>
-                      <input
-                        accept="image/*"
-                        type="file"
-                        id={`image-upload-${index}`}
-                        style={{ display: 'none' }}
-                        onChange={handleSingleImageChange(index)}
-                      />
-                      <label htmlFor={`image-upload-${index}`}>
-                        <Button
-                          component="span"
-                          variant="outlined"
-                          size="small"
+                  <Grid container spacing={2}>
+                    {formData.images.map((image, index) => (
+                      <Grid item xs={12} sm={6} md={4} key={index}>
+                        <Box
                           sx={{
-                            width: '100%',
-                            height: '120px',
+                            border: '1px dashed #ccc',
+                            borderRadius: 1,
+                            p: 2,
+                            mb: 2,
+                            position: 'relative',
+                            height: '100%',
                             display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center'
+                            flexDirection: 'column'
                           }}
                         >
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Typography variant="body2">
-                              Click to Upload
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              Image {index + 1}
-                            </Typography>
-                          </Box>
-                        </Button>
-                      </label>
-                    </Box>
-                  )}
+                          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                            Image {index + 1}
+                          </Typography>
+                          
+                          {image ? (
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                              <Typography variant="body2" noWrap>
+                                {image.name}
+                              </Typography>
+                              <Box sx={{ mt: 1, flex: 1, position: 'relative' }}>
+                                <img
+                                  src={URL.createObjectURL(image)}
+                                  alt={`Preview ${index + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '120px',
+                                    objectFit: 'cover',
+                                    borderRadius: '4px'
+                                  }}
+                                />
+                              </Box>
+                              <Button
+                                size="small"
+                                color="error"
+                                onClick={handleClearImage(index)}
+                                sx={{ mt: 1 }}
+                              >
+                                Remove
+                              </Button>
+                            </Box>
+                          ) : (
+                            <Box sx={{ 
+                              flex: 1, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}>
+                              <input
+                                accept="image/*"
+                                type="file"
+                                id={`image-upload-${index}`}
+                                style={{ display: 'none' }}
+                                onChange={handleSingleImageChange(index)}
+                              />
+                              <label htmlFor={`image-upload-${index}`}>
+                                <Button
+                                  component="span"
+                                  variant="outlined"
+                                  size="small"
+                                  sx={{
+                                    width: '100%',
+                                    height: '120px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <Box sx={{ textAlign: 'center' }}>
+                                    <Typography variant="body2">
+                                      Click to Upload
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">
+                                      Image {index + 1}
+                                    </Typography>
+                                  </Box>
+                                </Button>
+                              </label>
+                            </Box>
+                          )}
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
                 </Box>
               </Grid>
-            ))}
-          </Grid>
-        </Box>
 
-        {renderValidationErrors()}
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth
-          disabled={validateForm().length > 0}
-          sx={{
-            mt: 2,
-            background: 'linear-gradient(45deg, #2193b0 30%, #6dd5ed 90%)',
-            '&:hover': {
-              transform: 'scale(1.02)',
-            }
-          }}
-        >
-          Create Product
-        </Button>
-      </Box>
+              <Grid item xs={12}>
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+                  sx={{
+                    mt: 2,
+                    height: 56,
+                    background: 'linear-gradient(45deg, #2193b0, #6dd5ed)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #1c7a94, #5bb8cc)'
+                    },
+                    color: '#FFFFFF',
+                    fontWeight: 'bold',
+                    fontSize: '1rem',
+                    textTransform: 'none'
+                  }}
+                >
+                  {loading ? 'Creating Service...' : 'Create Service'}
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+        </StyledPaper>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
+        <Snackbar
+          open={success}
+          autoHideDuration={6000}
+          onClose={() => setSuccess(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          <Typography 
+            sx={{ 
+              bgcolor: 'success.main',
+              color: 'white',
+              p: 2,
+              borderRadius: 1
+            }}
+          >
+            Service created successfully!
+          </Typography>
+        </Snackbar>
+      </Container>
     </Box>
   );
 };

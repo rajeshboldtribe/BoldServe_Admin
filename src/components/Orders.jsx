@@ -11,8 +11,12 @@ import {
   Paper,
   Box,
   Container,
+  Typography,
   styled,
+  CircularProgress
 } from '@mui/material';
+import { paymentAPI } from '../utils/axios';
+import ShoppingBasketIcon from '@mui/icons-material/ShoppingBasket';
 import axios from 'axios';
 
 // Styled components for animations
@@ -58,24 +62,51 @@ const Orders = () => {
   const [tab, setTab] = useState(0);
   const [orders, setOrders] = useState({ accepted: [], cancelled: [] });
   const [isVisible, setIsVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Use environment variables for API URLs
+  const API_URL = process.env.NODE_ENV === 'production'
+    ? process.env.REACT_APP_PRODUCTION_API_URL
+    : process.env.REACT_APP_API_URL;
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await axios.get('YOUR_API_ENDPOINT/orders');
-        setOrders({
-          accepted: response.data.filter(order => order.status === 'accepted'),
-          cancelled: response.data.filter(order => order.status === 'cancelled'),
-        });
-        // Add small delay for animation
+        setLoading(true);
+        setError(null);
+        
+        // Get all orders
+        const response = await paymentAPI.getAllPayments();
+        console.log('Orders API Response:', response);
+
+        if (response && response.success) {
+          const allOrders = response.data || [];
+          setOrders({
+            accepted: allOrders.filter(order => 
+              order.status === 'accepted' || 
+              order.paymentStatus === 'successful'),
+            cancelled: allOrders.filter(order => 
+              order.status === 'cancelled' || 
+              order.paymentStatus === 'failed')
+          });
+        } else {
+          setOrders({ accepted: [], cancelled: [] });
+        }
+        
         setTimeout(() => setIsVisible(true), 100);
       } catch (error) {
         console.error('Error fetching orders:', error);
+        setError(error.response?.status === 404 
+          ? 'No orders found. The system is ready to receive new orders.'
+          : 'Failed to load orders. Please try again later.');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchOrders();
-  }, []);
+  }, [API_URL]);
 
   const handleTabChange = (event, newValue) => {
     setIsVisible(false);
@@ -85,41 +116,73 @@ const Orders = () => {
     }, 300);
   };
 
-  return (
-    <Box
-      sx={{
-        marginLeft: '240px', // Width of the sidebar
+  // Loading state
+  if (loading) {
+    return (
+      <Box sx={{
+        marginLeft: '240px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Empty state with custom message
+  if (!loading && orders.accepted.length === 0 && orders.cancelled.length === 0) {
+    return (
+      <Box sx={{
+        marginLeft: '240px',
         padding: '24px',
         minHeight: '100vh',
         backgroundColor: '#f5f7fa',
-      }}
-    >
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <ShoppingBasketIcon sx={{ fontSize: 60, color: '#2193b0', mb: 2 }} />
+        <Typography variant="h5" sx={{ color: '#2193b0', mb: 1 }}>
+          No Orders Available
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {error || 'Orders will appear here once customers start placing them'}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{
+      marginLeft: '240px',
+      padding: '24px',
+      minHeight: '100vh',
+      backgroundColor: '#f5f7fa',
+    }}>
       <Container maxWidth="lg" sx={{ mt: 2 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <Paper 
-            elevation={3}
-            sx={{
-              width: '100%',
-              borderRadius: 2,
-              overflow: 'hidden',
-              background: 'white',
-              p: 3,
-            }}
-          >
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}>
+          <Paper elevation={3} sx={{
+            width: '100%',
+            borderRadius: 2,
+            overflow: 'hidden',
+            background: 'white',
+            p: 3,
+          }}>
             <StyledTabs 
               value={tab} 
               onChange={handleTabChange}
               centered
               sx={{ mb: 3 }}
             >
-              <StyledTab label="Accepted Orders" />
-              <StyledTab label="Cancelled Orders" />
+              <StyledTab label={`Successful Payments (${orders.accepted.length})`} />
+              <StyledTab label={`Failed Payments (${orders.cancelled.length})`} />
             </StyledTabs>
 
             <AnimatedTableContainer
@@ -139,61 +202,34 @@ const Orders = () => {
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell 
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        background: '#f5f5f5',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Order ID
-                    </TableCell>
-                    <TableCell 
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        background: '#f5f5f5',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Customer
-                    </TableCell>
-                    <TableCell 
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        background: '#f5f5f5',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Product
-                    </TableCell>
-                    <TableCell 
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        background: '#f5f5f5',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Amount
-                    </TableCell>
-                    <TableCell 
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        background: '#f5f5f5',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Date
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Payment ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Customer</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Service</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Date</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {(tab === 0 ? orders.accepted : orders.cancelled).map((order) => (
-                    <StyledTableRow key={order.id}>
-                      <TableCell>{order.id}</TableCell>
-                      <TableCell>{order.customer}</TableCell>
-                      <TableCell>{order.product}</TableCell>
-                      <TableCell>₹{order.amount}</TableCell>
-                      <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
+                    <StyledTableRow key={order._id || order.paymentId}>
+                      <TableCell>{order.paymentId || order._id || 'N/A'}</TableCell>
+                      <TableCell>{order.customerName || order.customer || 'N/A'}</TableCell>
+                      <TableCell>{order.serviceName || order.service || 'N/A'}</TableCell>
+                      <TableCell>₹{order.amount?.toLocaleString() || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Typography
+                          sx={{
+                            color: order.status === 'successful' ? 'green' : 'red',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {order.status || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
+                      </TableCell>
                     </StyledTableRow>
                   ))}
                 </TableBody>

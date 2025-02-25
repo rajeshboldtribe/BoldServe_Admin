@@ -17,6 +17,7 @@ import {
   Alert
 } from '@mui/material';
 import { paymentAPI } from '../utils/axios';
+import PaymentIcon from '@mui/icons-material/Payment';
 
 const StyledTableRow = styled(TableRow)`
   transition: all 0.3s ease;
@@ -28,8 +29,7 @@ const StyledTableRow = styled(TableRow)`
 
 const Payments = () => {
   const [tabValue, setTabValue] = useState(0);
-  const [successfulPayments, setSuccessfulPayments] = useState([]);
-  const [cancelledPayments, setCancelledPayments] = useState([]);
+  const [payments, setPayments] = useState({ successful: [], failed: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -39,23 +39,26 @@ const Payments = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch both types of payments
-        const [successResponse, cancelResponse] = await Promise.all([
-          paymentAPI.getSuccessfulPayments(),
-          paymentAPI.getCancelledPayments()
-        ]);
+        // Fetch all payments
+        const response = await paymentAPI.getAllPayments();
+        console.log('Payments response:', response);
 
-        setSuccessfulPayments(successResponse.data);
-        setCancelledPayments(cancelResponse.data);
-
+        if (response && response.success) {
+          const allPayments = response.data || [];
+          // Split payments based on status
+          setPayments({
+            successful: allPayments.filter(payment => 
+              payment.status === 'successful' || payment.status === 'completed'),
+            failed: allPayments.filter(payment => 
+              payment.status === 'failed' || payment.status === 'cancelled')
+          });
+        } else {
+          setPayments({ successful: [], failed: [] });
+        }
       } catch (err) {
         console.error('Error fetching payments:', err);
-        setError(
-          `Failed to load payments: ${err.message}. ` +
-          'Please check your backend connection and API endpoints.'
-        );
-        setSuccessfulPayments([]);
-        setCancelledPayments([]);
+        setError('No payments found. The system is ready to process payments.');
+        setPayments({ successful: [], failed: [] });
       } finally {
         setLoading(false);
       }
@@ -86,7 +89,8 @@ const Payments = () => {
     );
   }
 
-  if (error) {
+  // Show empty state when no payments exist
+  if (!loading && payments.successful.length === 0 && payments.failed.length === 0) {
     return (
       <Box sx={{ 
         display: 'flex', 
@@ -94,18 +98,15 @@ const Payments = () => {
         alignItems: 'center', 
         justifyContent: 'center', 
         height: '100vh',
-        marginLeft: '240px'
+        marginLeft: '240px',
+        backgroundColor: '#f5f7fa'
       }}>
-        <Alert severity="error" sx={{ width: '80%', maxWidth: '600px' }}>
-          {error}
-        </Alert>
-        <Typography sx={{ mt: 2 }}>
-          Please check:
-          <ul>
-            <li>The backend server is running on port 8003</li>
-            <li>You are properly authenticated</li>
-            <li>The API endpoints are correctly configured</li>
-          </ul>
+        <PaymentIcon sx={{ fontSize: 60, color: '#2193b0', mb: 2 }} />
+        <Typography variant="h5" sx={{ color: '#2193b0', mb: 1 }}>
+          No Payments Made Yet
+        </Typography>
+        <Typography variant="body1" color="text.secondary" align="center">
+          Payments will appear here once customers complete their transactions
         </Typography>
       </Box>
     );
@@ -118,6 +119,7 @@ const Payments = () => {
           <TableRow>
             <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Order ID</TableCell>
             <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Customer Name</TableCell>
+            <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Service</TableCell>
             <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Amount</TableCell>
             <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Date</TableCell>
             <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Status</TableCell>
@@ -127,26 +129,31 @@ const Payments = () => {
           {payments.length > 0 ? (
             payments.map((payment) => (
               <StyledTableRow key={payment._id}>
-                <TableCell>{payment.orderId}</TableCell>
-                <TableCell>{payment.customerName}</TableCell>
-                <TableCell>₹{payment.amount}</TableCell>
-                <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>{payment._id}</TableCell>
+                <TableCell>{payment.customerName || 'N/A'}</TableCell>
+                <TableCell>{payment.serviceName || 'N/A'}</TableCell>
+                <TableCell>₹{payment.amount?.toLocaleString() || 'N/A'}</TableCell>
+                <TableCell>
+                  {payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : 'N/A'}
+                </TableCell>
                 <TableCell>
                   <Typography
                     sx={{
-                      color: payment.status === 'successful' ? 'green' : 'red',
+                      color: payment.status === 'successful' || payment.status === 'completed' 
+                        ? 'green' 
+                        : 'red',
                       fontWeight: 'bold'
                     }}
                   >
-                    {payment.status.toUpperCase()}
+                    {payment.status?.toUpperCase() || 'N/A'}
                   </Typography>
                 </TableCell>
               </StyledTableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} align="center">
-                No payments found
+              <TableCell colSpan={6} align="center">
+                No payments found for this category
               </TableCell>
             </TableRow>
           )}
@@ -169,17 +176,17 @@ const Payments = () => {
             sx={{ mb: 3 }}
           >
             <Tab 
-              label={`Successful Payments (${successfulPayments.length})`}
+              label={`Successful Payments (${payments.successful.length})`}
               sx={{ fontWeight: 'bold' }}
             />
             <Tab 
-              label={`Cancelled Payments (${cancelledPayments.length})`}
+              label={`Failed Payments (${payments.failed.length})`}
               sx={{ fontWeight: 'bold' }}
             />
           </Tabs>
 
-          {tabValue === 0 && renderPaymentTable(successfulPayments)}
-          {tabValue === 1 && renderPaymentTable(cancelledPayments)}
+          {tabValue === 0 && renderPaymentTable(payments.successful)}
+          {tabValue === 1 && renderPaymentTable(payments.failed)}
         </Paper>
       </Container>
     </Box>

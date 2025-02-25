@@ -6,6 +6,7 @@ import {
     ListItemText,
     Box,
     Typography,
+    Toolbar,
 } from '@mui/material';
 import {
     Dashboard as DashboardIcon,
@@ -14,67 +15,46 @@ import {
     People as UsersIcon,
     Payments as PaymentsIcon,
     Inventory2 as ProductsIcon,
+    AddBusiness as AddBusinessIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import logo from '../assets/BoldTribe_Logo-removebg-preview.png';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-// Styled components for animations
-const AnimatedListItem = styled(ListItem)(({ theme, isActive }) => ({
-    transition: 'all 0.3s ease',
-    position: 'relative',
-    overflow: 'hidden',
-    boxShadow: isActive ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
-    '&:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        transform: 'translateX(5px)',
-    },
-    '&::before': {
-        content: '""',
-        position: 'absolute',
-        left: '-100%',
-        top: 0,
-        width: '100%',
-        height: '100%',
-        background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent)',
-        transition: 'all 0.5s ease',
-    },
-    '&:hover::before': {
-        left: '100%',
-    }
-}));
+const drawerWidth = 240;
 
-const StyledDrawer = styled(Drawer)(({ theme }) => ({
+const StyledDrawer = styled(Drawer)({
+    width: drawerWidth,
+    flexShrink: 0,
     '& .MuiDrawer-paper': {
-        // New gradient options - choose one of these:
-        // Option 1: Blue-Purple Gradient
-        background: 'linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)',
-        
-        // Option 2: Deep Purple Gradient
-        // background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        
-        // Option 3: Ocean Blue Gradient
-        // background: 'linear-gradient(135deg, #4CA1AF 0%, #2C3E50 100%)',
-        
-        // Option 4: Midnight Blue Gradient
-        // background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-        
-        // Option 5: Royal Blue Gradient
-        // background: 'linear-gradient(135deg, #141E30 0%, #243B55 100%)',
-
-        color: '#fff',
-        width: 240,
+        width: drawerWidth,
         boxSizing: 'border-box',
-        boxShadow: '4px 0 15px rgba(0, 0, 0, 0.1)',
-        '& .MuiListItemIcon-root': {
-            color: 'rgba(255, 255, 255, 0.9)',
-        },
-        '& .MuiListItemText-primary': {
-            color: 'rgba(255, 255, 255, 0.9)',
-        }
+        background: 'linear-gradient(180deg, #2193b0 0%, #6dd5ed 100%)',
+        borderRight: 'none',
+        boxShadow: '4px 0 8px rgba(0, 0, 0, 0.1)',
     }
+});
+
+const StyledListItem = styled(ListItem)(({ theme, selected }) => ({
+    margin: '8px 16px',
+    borderRadius: '8px',
+    transition: 'all 0.3s ease',
+    backgroundColor: selected ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.1)',
+    boxShadow: selected ? '0 4px 8px rgba(0, 0, 0, 0.2)' : 'none',
+    '&:hover': {
+        backgroundColor: selected ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+        transform: 'translateY(-2px)',
+    },
+    '& .MuiListItemIcon-root': {
+        color: selected ? '#2193b0' : '#ffffff',
+    },
+    '& .MuiListItemText-primary': {
+        color: selected ? '#2193b0' : '#ffffff',
+        fontWeight: selected ? 600 : 400,
+    },
 }));
 
 const LogoBox = styled(Box)({
@@ -94,11 +74,21 @@ const LogoBox = styled(Box)({
 const Sidebar = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [selectedItem] = useState(location.pathname);
+    const [selectedPath, setSelectedPath] = useState('/');
+
+    useEffect(() => {
+        // Update selected path when location changes
+        setSelectedPath(location.pathname);
+    }, [location]);
+
+    const handleNavigation = (path) => {
+        navigate(path);
+        setSelectedPath(path);
+    };
 
     const menuItems = [
         { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-        { text: 'Services', icon: <ServicesIcon />, path: '/services' },
+        { text: 'Services', icon: <AddBusinessIcon />, path: '/services' },
         { text: 'Products', icon: <ProductsIcon />, path: '/products' },
         { text: 'Orders', icon: <OrdersIcon />, path: '/orders' },
         { text: 'Users', icon: <UsersIcon />, path: '/users' },
@@ -107,6 +97,7 @@ const Sidebar = () => {
 
     return (
         <StyledDrawer variant="permanent">
+            <Toolbar />
             <LogoBox>
                 <img 
                     src={logo} 
@@ -117,54 +108,22 @@ const Sidebar = () => {
                     }}
                 />
             </LogoBox>
-            <List sx={{ padding: '10px' }}>
+            <List sx={{ mt: 2 }}>
                 {menuItems.map((item) => (
-                    <AnimatedListItem
+                    <StyledListItem
                         button
                         key={item.text}
-                        onClick={() => navigate(item.path)}
-                        component={Link}
-                        to={item.path}
-                        isActive={selectedItem === item.path}
-                        sx={{
-                            margin: '4px 0',
-                            borderRadius: '8px',
-                            backgroundColor: selectedItem === item.path 
-                                ? 'rgba(255, 255, 255, 0.2)' 
-                                : 'transparent',
-                            '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                            },
-                            transition: 'all 0.3s ease',
-                            transform: selectedItem === item.path ? 'scale(1.02)' : 'scale(1)',
-                        }}
+                        onClick={() => handleNavigation(item.path)}
+                        selected={selectedPath === item.path}
                     >
-                        <ListItemIcon 
-                            sx={{ 
-                                color: selectedItem === item.path 
-                                    ? '#fff' 
-                                    : 'rgba(255, 255, 255, 0.8)',
-                                transition: 'all 0.3s ease',
-                                transform: selectedItem === item.path ? 'scale(1.1)' : 'scale(1)',
-                                minWidth: '40px'
-                            }}
-                        >
-                            {item.icon}
-                        </ListItemIcon>
+                        <ListItemIcon>{item.icon}</ListItemIcon>
                         <ListItemText 
                             primary={item.text}
-                            sx={{
-                                '& .MuiListItemText-primary': {
-                                    color: selectedItem === item.path 
-                                        ? '#fff' 
-                                        : 'rgba(255, 255, 255, 0.8)',
-                                    fontWeight: selectedItem === item.path ? 600 : 400,
-                                    fontSize: '0.95rem',
-                                    transition: 'all 0.3s ease'
-                                }
+                            primaryTypographyProps={{
+                                fontSize: '0.95rem',
                             }}
                         />
-                    </AnimatedListItem>
+                    </StyledListItem>
                 ))}
             </List>
         </StyledDrawer>
