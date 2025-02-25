@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -16,7 +16,7 @@ import {
   styled,
   Alert
 } from '@mui/material';
-import { paymentAPI } from '../utils/axios';
+import axios from 'axios';
 import PaymentIcon from '@mui/icons-material/Payment';
 
 const StyledTableRow = styled(TableRow)`
@@ -37,27 +37,27 @@ const Payments = () => {
     const fetchPayments = async () => {
       try {
         setLoading(true);
-        setError(null);
-
-        // Fetch all payments
-        const response = await paymentAPI.getAllPayments();
-        console.log('Payments response:', response);
-
-        if (response && response.success) {
-          const allPayments = response.data || [];
-          // Split payments based on status
+        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/payments', {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.data && response.data.success) {
           setPayments({
-            successful: allPayments.filter(payment => 
+            successful: response.data.data.filter(payment => 
               payment.status === 'successful' || payment.status === 'completed'),
-            failed: allPayments.filter(payment => 
+            failed: response.data.data.filter(payment => 
               payment.status === 'failed' || payment.status === 'cancelled')
           });
+          setError(null);
         } else {
-          setPayments({ successful: [], failed: [] });
+          throw new Error('Failed to fetch payments');
         }
-      } catch (err) {
-        console.error('Error fetching payments:', err);
-        setError('No payments found. The system is ready to process payments.');
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        setError('Failed to load payments. Please try again later.');
         setPayments({ successful: [], failed: [] });
       } finally {
         setLoading(false);
@@ -153,7 +153,7 @@ const Payments = () => {
           ) : (
             <TableRow>
               <TableCell colSpan={6} align="center">
-                No payments found for this category
+                {error || 'No payments found'}
               </TableCell>
             </TableRow>
           )}

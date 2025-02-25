@@ -24,10 +24,17 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/users');
+        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/users', {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
         
+        // Check if response has data and success is true
         if (response.data && response.data.success) {
-          setUsers(response.data.data);
+          setUsers(response.data.data || []);
+          setError(null);
         } else {
           throw new Error('Failed to fetch users');
         }
@@ -48,149 +55,117 @@ const Users = () => {
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
-        height: '100vh',
-        width: '100%'
+        height: '100%',
+        width: '100%',
+        mt: 8
       }}>
         <CircularProgress />
       </Box>
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ p: 3, width: '100%' }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{
+      width: '100%',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
       position: 'absolute',
       top: '50%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: '90%',
-      maxWidth: '1200px',
-      marginLeft: '120px',
+      marginLeft: '120px', // Half of sidebar width to offset centering
+      mt: -4 // Adjust for header
     }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4,
-          borderRadius: 2,
-          maxHeight: '80vh',
-          overflow: 'hidden'
-        }}
-      >
-        <Typography 
-          variant="h5" 
+      <Container maxWidth="lg" sx={{ 
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%'
+      }}>
+        <Paper 
+          elevation={3} 
           sx={{ 
-            mb: 4,
-            color: '#2193b0', 
-            fontWeight: 600,
-            textAlign: 'center',
-            fontSize: '1.5rem'
+            p: 3, 
+            borderRadius: 2, 
+            width: '100%',
+            maxWidth: '1000px',
+            mx: 'auto',
+            overflow: 'hidden',
+            maxHeight: '600px'
           }}
         >
-          Registered Users
-        </Typography>
-        
-        <TableContainer sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <Table stickyHeader size="medium">
-            <TableHead>
-              <TableRow>
-                <TableCell 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    background: '#f5f5f5',
-                    fontSize: '1rem',
-                    padding: '16px'
-                  }}
-                >
-                  ID
-                </TableCell>
-                <TableCell 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    background: '#f5f5f5',
-                    fontSize: '1rem',
-                    padding: '16px'
-                  }}
-                >
-                  Email
-                </TableCell>
-                <TableCell 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    background: '#f5f5f5',
-                    fontSize: '1rem',
-                    padding: '16px'
-                  }}
-                >
-                  Name
-                </TableCell>
-                <TableCell 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    background: '#f5f5f5',
-                    fontSize: '1rem',
-                    padding: '16px'
-                  }}
-                >
-                  Mobile
-                </TableCell>
-                <TableCell 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    background: '#f5f5f5',
-                    fontSize: '1rem',
-                    padding: '16px'
-                  }}
-                >
-                  Address
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.length > 0 ? (
-                users.map((user) => (
-                  <TableRow 
-                    key={user._id}
-                    sx={{
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(33, 147, 176, 0.1)',
-                        transform: 'scale(1.01)'
-                      },
-                      '& .MuiTableCell-root': {
-                        fontSize: '0.95rem',
-                        padding: '16px'
-                      }
-                    }}
-                  >
-                    <TableCell>{user._id || 'N/A'}</TableCell>
-                    <TableCell>{user.email || 'N/A'}</TableCell>
-                    <TableCell>{user.fullName || 'N/A'}</TableCell>
-                    <TableCell>{user.mobile || 'N/A'}</TableCell>
-                    <TableCell>{user.address || 'N/A'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              mb: 3, 
+              color: '#2193b0', 
+              fontWeight: 600,
+              textAlign: 'center'
+            }}
+          >
+            Registered Users
+          </Typography>
+          
+          <TableContainer sx={{ 
+            maxHeight: '450px',
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': {
+              width: '8px'
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '4px'
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#2193b0',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#1c7a94'
+              }
+            }
+          }}>
+            <Table stickyHeader>
+              <TableHead>
                 <TableRow>
-                  <TableCell 
-                    colSpan={5} 
-                    align="center"
-                    sx={{ fontSize: '1rem', padding: '20px' }}
-                  >
-                    No users found
-                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Mobile</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Address</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {users && users.length > 0 ? (
+                  users.map((user) => (
+                    <TableRow 
+                      key={user._id}
+                      sx={{
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          backgroundColor: 'rgba(33, 147, 176, 0.1)',
+                          transform: 'scale(1.01)'
+                        }
+                      }}
+                    >
+                      <TableCell>{user.fullName || 'N/A'}</TableCell>
+                      <TableCell>{user.email || 'N/A'}</TableCell>
+                      <TableCell>{user.mobile || 'N/A'}</TableCell>
+                      <TableCell>{user.address || 'N/A'}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      {error || 'No users found'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Container>
     </Box>
   );
 };
