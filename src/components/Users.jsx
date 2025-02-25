@@ -12,7 +12,6 @@ import {
   CircularProgress,
   Container
 } from '@mui/material';
-import axios from 'axios';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -23,29 +22,42 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        setError(null); // Reset error state
+        setError(null);
 
-        // Simple GET request without additional configuration
-        const response = await fetch('https://boldservebackend-production.up.railway.app/api/users');
-        
+        const response = await fetch('https://boldservebackend-production.up.railway.app/api/users', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          },
+          mode: 'cors',
+          credentials: 'omit'
+        });
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
-        console.log('API Response:', data); // Debug log
 
-        if (data && Array.isArray(data)) {
-          setUsers(data);
-        } else if (data && data.data && Array.isArray(data.data)) {
-          setUsers(data.data);
+        const result = await response.json();
+        console.log('API Response:', result);
+
+        // Check for the correct data structure
+        if (result && result.data && Array.isArray(result.data)) {
+          setUsers(result.data);
+        } else if (Array.isArray(result)) {
+          setUsers(result);
         } else {
           throw new Error('Invalid data format received');
         }
 
       } catch (error) {
-        console.error('Fetch error:', error);
-        setError('Failed to load users. Please try again later.');
+        console.error('Fetch error details:', {
+          message: error.message,
+          stack: error.stack,
+          response: error.response
+        });
+        setError('Unable to load user data. Please try again.');
         setUsers([]);
       } finally {
         setLoading(false);
@@ -53,8 +65,15 @@ const Users = () => {
     };
 
     fetchUsers();
+
+    // Cleanup function
+    return () => {
+      setUsers([]);
+      setError(null);
+    };
   }, []);
 
+  // Loading state
   if (loading) {
     return (
       <Box sx={{ 
@@ -70,6 +89,7 @@ const Users = () => {
     );
   }
 
+  // Main component render
   return (
     <Box sx={{
       width: '100%',
@@ -164,11 +184,14 @@ const Users = () => {
                   <TableRow>
                     <TableCell colSpan={4} align="center">
                       {error ? (
-                        <Typography color="error">
-                          {error}
-                          <br />
-                          <small>Please check the network connection or try refreshing the page.</small>
-                        </Typography>
+                        <Box>
+                          <Typography color="error" gutterBottom>
+                            {error}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            If the problem persists, please contact support.
+                          </Typography>
+                        </Box>
                       ) : (
                         'No users found'
                       )}
