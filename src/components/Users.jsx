@@ -23,9 +23,17 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('https://boldservebackend-production.up.railway.app/api/users');
-        
-        // The API returns data in {success: true, data: [...]} format
+        const response = await axios({
+          method: 'GET',
+          url: 'https://boldservebackend-production.up.railway.app/api/users',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        });
+
+        console.log('API Response:', response.data); // For debugging
+
         if (response.data && response.data.success) {
           setUsers(response.data.data);
           setError(null);
@@ -33,8 +41,9 @@ const Users = () => {
           throw new Error('Failed to fetch users');
         }
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error details:', error);
         setError('Failed to load users. Please try again later.');
+        setUsers([]); // Reset users on error
       } finally {
         setLoading(false);
       }
@@ -57,6 +66,9 @@ const Users = () => {
       </Box>
     );
   }
+
+  // Check if we have users data
+  const hasUsers = Array.isArray(users) && users.length > 0;
 
   return (
     <Box sx={{
@@ -130,7 +142,7 @@ const Users = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {users && users.length > 0 ? (
+                {hasUsers ? (
                   users.map((user) => (
                     <TableRow 
                       key={user._id}
