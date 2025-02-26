@@ -32,12 +32,16 @@ import {
     DialogContentText
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { motion } from 'framer-motion';
-import axios from '../utils/axios';
+import axios from 'axios';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+
+// Define the API URL based on environment
+const API_URL = process.env.NODE_ENV === 'production'
+    ? 'https://boldservebackend-production.up.railway.app'
+    : 'http://localhost:8003';
 
 const AdminProduct = () => {
     const [products, setProducts] = useState([]);
@@ -52,16 +56,18 @@ const AdminProduct = () => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get('/api/services');
+                const response = await axios.get(`${API_URL}/api/services`);
                 
                 if (response.data && Array.isArray(response.data)) {
                     setProducts(response.data);
+                } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+                    setProducts(response.data.data);
                 } else {
                     throw new Error('Invalid data format received');
                 }
                 setError(null);
             } catch (error) {
-                console.error('Error fetching products:', error.response?.data || error);
+                console.error('Error fetching products:', error);
                 setError('Failed to load products. Please try again later.');
                 setProducts([]);
             } finally {
@@ -75,13 +81,13 @@ const AdminProduct = () => {
     const handleDelete = async () => {
         try {
             setLoading(true);
-            await axios.delete(`/api/services/${selectedProduct._id}`);
+            await axios.delete(`${API_URL}/api/services/${selectedProduct._id}`);
             
             setProducts(products.filter(p => p._id !== selectedProduct._id));
             setSuccessMessage('Product deleted successfully!');
             setSuccess(true);
         } catch (error) {
-            console.error('Error deleting product:', error.response?.data || error);
+            console.error('Error deleting product:', error);
             setError('Failed to delete product. Please try again.');
         } finally {
             setLoading(false);
