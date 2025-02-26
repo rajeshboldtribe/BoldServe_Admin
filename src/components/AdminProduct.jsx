@@ -56,15 +56,24 @@ const AdminProduct = () => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`${API_URL}/api/services`);
+                const response = await axios.get('https://boldservebackend-production.up.railway.app/api/services', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                if (response.data && Array.isArray(response.data)) {
-                    setProducts(response.data);
-                } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-                    setProducts(response.data.data);
-                } else {
-                    throw new Error('Invalid data format received');
+                console.log('API Response:', response.data); // Debug log
+
+                // Handle both array and object responses
+                let productsData = [];
+                if (Array.isArray(response.data)) {
+                    productsData = response.data;
+                } else if (response.data && Array.isArray(response.data.data)) {
+                    productsData = response.data.data;
                 }
+
+                setProducts(productsData);
                 setError(null);
             } catch (error) {
                 console.error('Error fetching products:', error);
@@ -78,10 +87,20 @@ const AdminProduct = () => {
         fetchProducts();
     }, []);
 
+    const handleDeleteClick = (product) => {
+        setSelectedProduct(product);
+        setDeleteDialogOpen(true);
+    };
+
     const handleDelete = async () => {
         try {
             setLoading(true);
-            await axios.delete(`${API_URL}/api/services/${selectedProduct._id}`);
+            await axios.delete(`https://boldservebackend-production.up.railway.app/api/services/${selectedProduct._id}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
             
             setProducts(products.filter(p => p._id !== selectedProduct._id));
             setSuccessMessage('Product deleted successfully!');
@@ -237,10 +256,7 @@ const AdminProduct = () => {
                                                 variant="contained"
                                                 color="error"
                                                 startIcon={<DeleteIcon />}
-                                                onClick={() => {
-                                                    setSelectedProduct(product);
-                                                    setDeleteDialogOpen(true);
-                                                }}
+                                                onClick={() => handleDeleteClick(product)}
                                                 sx={{
                                                     textTransform: 'none',
                                                     boxShadow: 'none'
