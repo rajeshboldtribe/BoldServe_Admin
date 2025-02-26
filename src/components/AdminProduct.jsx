@@ -33,12 +33,11 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import axios from '../utils/axios';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import API_URL from '../utils/axios';
 
 const AdminProduct = () => {
     const [products, setProducts] = useState([]);
@@ -49,44 +48,40 @@ const AdminProduct = () => {
     const [success, setSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
-    const fetchProducts = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(`${API_URL}/api/services`);
-            console.log('API Response:', response.data); // Debug log
-            
-            if (response.data && response.data.success) {
-                setProducts(response.data.data || []);
-            } else if (Array.isArray(response.data)) {
-                setProducts(response.data);
-            } else {
-                throw new Error('Invalid data format received');
-            }
-            setError(null);
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            setError('Failed to load products. Please try again later.');
-            setProducts([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const response = await axios.get('/api/services');
+                
+                if (response.data && Array.isArray(response.data)) {
+                    setProducts(response.data);
+                } else {
+                    throw new Error('Invalid data format received');
+                }
+                setError(null);
+            } catch (error) {
+                console.error('Error fetching products:', error.response?.data || error);
+                setError('Failed to load products. Please try again later.');
+                setProducts([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchProducts();
     }, []);
 
     const handleDelete = async () => {
         try {
             setLoading(true);
-            await axios.delete(`${API_URL}/api/services/${selectedProduct._id}`);
+            await axios.delete(`/api/services/${selectedProduct._id}`);
             
-            // Update products list
             setProducts(products.filter(p => p._id !== selectedProduct._id));
             setSuccessMessage('Product deleted successfully!');
             setSuccess(true);
         } catch (error) {
-            console.error('Error deleting product:', error);
+            console.error('Error deleting product:', error.response?.data || error);
             setError('Failed to delete product. Please try again.');
         } finally {
             setLoading(false);

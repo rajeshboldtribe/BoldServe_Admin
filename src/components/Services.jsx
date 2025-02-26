@@ -19,8 +19,7 @@ import {
   Paper,
 } from '@mui/material';
 import { categoriesWithSubs } from '../utils/categories';
-import { serviceAPI } from '../utils/axios'; // Make sure you have axios configured
-import axios from 'axios';
+import axios from '../utils/axios'; // Use the configured axios instance
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import styled from '@emotion/styled';
 import { styled as muiStyled } from '@mui/material/styles';
@@ -120,45 +119,43 @@ const Services = () => {
     setError(null);
     
     try {
-      const response = await axios({
-        method: 'POST',
-        url: 'https://boldservebackend-production.up.railway.app/api/services',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        data: {
-          productName: formData.productName,
-          description: formData.description,
-          price: Number(formData.price),
-          category: formData.category,
-          images: [formData.imageUrl], // Sending as array since API expects images array
-          isAvailable: true,
-          duration: 0, // Adding required fields from API schema
-          subCategory: "Default", // Adding required field
-          offers: "0",
-          review: "0",
-          rating: 0
-        }
-      });
+      // Match the exact API data structure
+      const serviceData = {
+        name: formData.productName,           // Required field from API
+        productName: formData.productName,    // Same as name
+        category: formData.category,
+        subCategory: "Adhesive & Glue",       // Required field
+        price: Number(formData.price),
+        description: formData.description,
+        offers: "0",                          // Required field
+        review: "0",                          // Required field
+        rating: 0,                            // Required field
+        images: [formData.imageUrl],          // Array format required
+        isAvailable: true,                    // Required field
+        duration: 0                           // Required field
+      };
 
-      console.log('Service created:', response.data);
-      setSuccess(true);
-      setFormData({
-        category: '',
-        subCategory: '',
-        productName: '',
-        price: '',
-        description: '',
-        offers: '',
-        review: '',
-        rating: '',
-        images: new Array(6).fill(null),
-        imageUrl: ''
-      });
+      const response = await axios.post('/api/services', serviceData);
+      
+      if (response.data) {
+        console.log('Service created:', response.data);
+        setSuccess(true);
+        // Reset form
+        setFormData({
+          productName: '',
+          description: '',
+          price: '',
+          category: '',
+          imageUrl: ''
+        });
+      }
     } catch (error) {
-      console.error('Error creating service:', error.response?.data || error.message);
-      setError(error.response?.data?.message || 'Failed to create service. Please try again.');
+      console.error('Error creating service:', {
+        message: error.message,
+        response: error.response?.data,
+        data: error.response?.data
+      });
+      setError('Failed to create service. Please try again.');
     } finally {
       setLoading(false);
     }

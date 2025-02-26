@@ -14,6 +14,14 @@ const instance = axios.create({
 // Add request interceptor for handling errors
 instance.interceptors.request.use(
     (config) => {
+        // Log request for debugging in production
+        if (process.env.NODE_ENV === 'production') {
+            console.log('API Request:', {
+                url: config.url,
+                method: config.method,
+                data: config.data
+            });
+        }
         // Add auth token if exists
         const token = localStorage.getItem('token');
         if (token) {
@@ -28,9 +36,21 @@ instance.interceptors.request.use(
 
 // Add response interceptor for handling errors
 instance.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Log successful response in production
+        if (process.env.NODE_ENV === 'production') {
+            console.log('API Response:', response.data);
+        }
+        return response;
+    },
     (error) => {
-        console.error('API Error:', error.response?.data || error.message);
+        // Log detailed error information
+        console.error('API Error:', {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message,
+            config: error.config
+        });
         return Promise.reject(error);
     }
 );
@@ -106,6 +126,32 @@ const paymentAPI = {
             console.error('Error fetching failed payments:', error);
             throw error;
         }
+    }
+};
+
+// Helper function for creating services
+instance.createService = async (serviceData) => {
+    try {
+        // Ensure all required fields are present based on the API schema
+        const payload = {
+            productName: serviceData.productName,
+            description: serviceData.description,
+            price: Number(serviceData.price),
+            category: serviceData.category,
+            images: Array.isArray(serviceData.images) ? serviceData.images : [serviceData.imageUrl],
+            isAvailable: true,
+            duration: 0,
+            subCategory: serviceData.subCategory || "Default",
+            offers: "0",
+            review: "0",
+            rating: 0
+        };
+
+        const response = await instance.post('/api/services', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Service creation error:', error);
+        throw error;
     }
 };
 
