@@ -1,15 +1,39 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production'
-    ? 'https://boldservebackend-production.up.railway.app'
-    : 'http://localhost:8003';
-
-const axiosInstance = axios.create({
-    baseURL: API_BASE_URL,
+const instance = axios.create({
+    baseURL: process.env.NODE_ENV === 'production'
+        ? 'https://boldservebackend-production.up.railway.app'
+        : 'http://localhost:8003',
     headers: {
-        'Content-Type': 'application/json',
-    }
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    },
+    timeout: 10000
 });
+
+// Add request interceptor for handling errors
+instance.interceptors.request.use(
+    (config) => {
+        // Add auth token if exists
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor for handling errors
+instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error('API Error:', error.response?.data || error.message);
+        return Promise.reject(error);
+    }
+);
 
 // Admin API endpoints
 const adminAPI = {
@@ -33,7 +57,7 @@ const adminAPI = {
 const serviceAPI = {
     getAllProducts: async () => {
         try {
-            const response = await axiosInstance.get('/api/services');
+            const response = await instance.get('/api/services');
             return response.data;
         } catch (error) {
             console.error('Error fetching products:', error);
@@ -43,7 +67,7 @@ const serviceAPI = {
 
     deleteProduct: async (productId) => {
         try {
-            const response = await axiosInstance.delete(`/api/services/${productId}`);
+            const response = await instance.delete(`/api/services/${productId}`);
             return response.data;
         } catch (error) {
             console.error('Error deleting product:', error);
@@ -56,7 +80,7 @@ const serviceAPI = {
 const paymentAPI = {
     getAllPayments: async () => {
         try {
-            const response = await axiosInstance.get(`/api/orders`);
+            const response = await instance.get('/api/orders');
             return response.data;
         } catch (error) {
             console.error('Error fetching all payments:', error);
@@ -66,7 +90,7 @@ const paymentAPI = {
 
     getSuccessfulPayments: async () => {
         try {
-            const response = await axiosInstance.get(`/api/orders?status=accepted`);
+            const response = await instance.get('/api/orders?status=accepted');
             return response.data;
         } catch (error) {
             console.error('Error fetching successful payments:', error);
@@ -76,7 +100,7 @@ const paymentAPI = {
 
     getFailedPayments: async () => {
         try {
-            const response = await axiosInstance.get(`/api/orders?status=cancelled`);
+            const response = await instance.get('/api/orders?status=cancelled');
             return response.data;
         } catch (error) {
             console.error('Error fetching failed payments:', error);
@@ -85,32 +109,5 @@ const paymentAPI = {
     }
 };
 
-// Simple request logger
-axiosInstance.interceptors.request.use(
-    (config) => {
-        console.log('Making request to:', config.baseURL + config.url);
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-// Simple response logger
-axiosInstance.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    (error) => {
-        console.error('API Error:', {
-            url: error.config?.url,
-            method: error.config?.method,
-            status: error.response?.status,
-            message: error.message
-        });
-        return Promise.reject(error);
-    }
-);
-
 export { adminAPI, serviceAPI, paymentAPI };
-export default axiosInstance; 
+export default instance; 
