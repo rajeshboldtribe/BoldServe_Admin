@@ -56,27 +56,27 @@ const AdminProduct = () => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get('https://boldservebackend-production.up.railway.app/api/services', {
+                const response = await fetch('https://boldservebackend-production.up.railway.app/api/services', {
+                    method: 'GET',
                     headers: {
                         'Accept': 'application/json',
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     }
                 });
-                
-                console.log('API Response:', response.data); // Debug log
 
-                // Handle both array and object responses
-                let productsData = [];
-                if (Array.isArray(response.data)) {
-                    productsData = response.data;
-                } else if (response.data && Array.isArray(response.data.data)) {
-                    productsData = response.data.data;
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
+                const data = await response.json();
+                console.log('Fetched data:', data); // Debug log
+
+                // Handle the data whether it's an array or wrapped in a data property
+                const productsData = Array.isArray(data) ? data : (data.data || []);
                 setProducts(productsData);
                 setError(null);
             } catch (error) {
-                console.error('Error fetching products:', error);
+                console.error('Fetch error:', error);
                 setError('Failed to load products. Please try again later.');
                 setProducts([]);
             } finally {
@@ -93,20 +93,27 @@ const AdminProduct = () => {
     };
 
     const handleDelete = async () => {
+        if (!selectedProduct?._id) return;
+
         try {
             setLoading(true);
-            await axios.delete(`https://boldservebackend-production.up.railway.app/api/services/${selectedProduct._id}`, {
+            const response = await fetch(`https://boldservebackend-production.up.railway.app/api/services/${selectedProduct._id}`, {
+                method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 }
             });
-            
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             setProducts(products.filter(p => p._id !== selectedProduct._id));
             setSuccessMessage('Product deleted successfully!');
             setSuccess(true);
         } catch (error) {
-            console.error('Error deleting product:', error);
+            console.error('Delete error:', error);
             setError('Failed to delete product. Please try again.');
         } finally {
             setLoading(false);
