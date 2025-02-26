@@ -1,31 +1,20 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: process.env.NODE_ENV === 'production'
-        ? 'https://boldservebackend-production.up.railway.app'
-        : 'http://localhost:8003',
+    baseURL: 'https://boldservebackend-production.up.railway.app',
+    timeout: 15000,
     headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-    },
-    timeout: 10000
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
 });
 
-// Add request interceptor for handling errors
+// Add auth token to requests
 instance.interceptors.request.use(
     (config) => {
-        // Log request for debugging in production
-        if (process.env.NODE_ENV === 'production') {
-            console.log('API Request:', {
-                url: config.url,
-                method: config.method,
-                data: config.data
-            });
-        }
-        // Add auth token if exists
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('adminToken');
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            config.headers['Authorization'] = `Bearer ${token}`;
         }
         return config;
     },
@@ -34,23 +23,14 @@ instance.interceptors.request.use(
     }
 );
 
-// Add response interceptor for handling errors
+// Handle response
 instance.interceptors.response.use(
-    (response) => {
-        // Log successful response in production
-        if (process.env.NODE_ENV === 'production') {
-            console.log('API Response:', response.data);
-        }
-        return response;
-    },
+    (response) => response,
     (error) => {
-        // Log detailed error information
-        console.error('API Error:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message,
-            config: error.config
-        });
+        if (error.response?.status === 401) {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login';
+        }
         return Promise.reject(error);
     }
 );

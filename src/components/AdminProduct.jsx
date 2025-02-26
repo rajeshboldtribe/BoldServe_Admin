@@ -37,6 +37,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../utils/axios';
 
 // Define the API URL based on environment
 const API_URL = process.env.NODE_ENV === 'production'
@@ -45,40 +47,26 @@ const API_URL = process.env.NODE_ENV === 'production'
 
 const AdminProduct = () => {
     const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [success, setSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const navigate = useNavigate();
 
+    // Fetch products on component mount
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('https://boldservebackend-production.up.railway.app/api/services', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
+                const response = await fetch('https://boldservebackend-production.up.railway.app/api/services');
                 const data = await response.json();
-                console.log('Fetched data:', data); // Debug log
-
-                // Handle the data whether it's an array or wrapped in a data property
-                const productsData = Array.isArray(data) ? data : (data.data || []);
-                setProducts(productsData);
-                setError(null);
+                console.log('Fetched products:', data);
+                setProducts(data);
             } catch (error) {
-                console.error('Fetch error:', error);
-                setError('Failed to load products. Please try again later.');
-                setProducts([]);
+                console.error('Error fetching products:', error);
+                setError('Failed to load products');
             } finally {
                 setLoading(false);
             }
@@ -87,39 +75,83 @@ const AdminProduct = () => {
         fetchProducts();
     }, []);
 
-    const handleDeleteClick = (product) => {
-        setSelectedProduct(product);
-        setDeleteDialogOpen(true);
-    };
-
+    // Handle delete operation
     const handleDelete = async () => {
         if (!selectedProduct?._id) return;
 
         try {
             setLoading(true);
-            const response = await fetch(`https://boldservebackend-production.up.railway.app/api/services/${selectedProduct._id}`, {
+            setError(null);
+
+            // Log delete attempt
+            console.log('Attempting to delete product:', {
+                id: selectedProduct._id,
+                name: selectedProduct.productName
+            });
+
+            // Update the delete URL to match the backend route
+            const deleteUrl = `https://boldservebackend-production.up.railway.app/api/services/admin/products/${selectedProduct._id}`;
+            console.log('Delete URL:', deleteUrl);
+
+            const deleteResponse = await fetch(deleteUrl, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                }
+                    'Content-Type': 'application/json'
+                },
+                mode: 'cors'
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Log the complete response
+            console.log('Delete Response:', {
+                status: deleteResponse.status,
+                statusText: deleteResponse.statusText,
+                ok: deleteResponse.ok
+            });
+
+            if (!deleteResponse.ok) {
+                throw new Error(`Delete failed with status: ${deleteResponse.status}`);
             }
 
-            setProducts(products.filter(p => p._id !== selectedProduct._id));
+            // On successful delete
+            setProducts(prevProducts => 
+                prevProducts.filter(p => p._id !== selectedProduct._id)
+            );
+            
             setSuccessMessage('Product deleted successfully!');
             setSuccess(true);
+
+            // Refresh the products list
+            const getResponse = await fetch('https://boldservebackend-production.up.railway.app/api/services');
+            const updatedProducts = await getResponse.json();
+            
+            if (Array.isArray(updatedProducts)) {
+                setProducts(updatedProducts);
+                console.log('Products list updated:', updatedProducts);
+            }
+
         } catch (error) {
-            console.error('Delete error:', error);
+            console.error('Delete operation failed:', error);
             setError('Failed to delete product. Please try again.');
         } finally {
             setLoading(false);
             setDeleteDialogOpen(false);
             setSelectedProduct(null);
         }
+    };
+
+    // Handle delete button click
+    const handleDeleteClick = (product) => {
+        console.log('Selected product for deletion:', {
+            id: product._id,
+            name: product.productName
+        });
+        setSelectedProduct(product);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleLoginRedirect = () => {
+        navigate('/admin/login'); // Adjust this path according to your login route
     };
 
     const getImageUrl = (imagePathArray) => {
@@ -130,16 +162,24 @@ const AdminProduct = () => {
         return 'https://via.placeholder.com/300';
     };
 
-    if (loading) {
+    if (error?.includes('login')) {
         return (
-            <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '100vh',
-                marginLeft: '240px'
-            }}>
-                <CircularProgress />
+            <Box sx={{ p: 3 }}>
+                <Container maxWidth="sm">
+                    <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+                        <Typography variant="h6" color="error" gutterBottom>
+                            {error}
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleLoginRedirect}
+                            sx={{ mt: 2 }}
+                        >
+                            Go to Login
+                        </Button>
+                    </Paper>
+                </Container>
             </Box>
         );
     }
@@ -177,168 +217,118 @@ const AdminProduct = () => {
 
     // Rest of your existing return statement for showing products
     return (
-        <Box sx={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '100vh',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            marginLeft: '120px',
-            mt: -4
-        }}>
+        <Box sx={{ p: 3 }}>
             <Container maxWidth="lg">
-                <Paper 
-                    elevation={3} 
-                    sx={{ 
-                        p: 3, 
-                        borderRadius: 2,
-                        width: '100%',
-                        maxWidth: '1200px',
-                        mx: 'auto',
-                        overflow: 'hidden',
-                        maxHeight: '80vh'
-                    }}
-                >
-                    <Typography 
-                        variant="h5" 
-                        sx={{ 
-                            mb: 3, 
-                            color: '#2193b0', 
-                            fontWeight: 600,
-                            textAlign: 'center'
-                        }}
-                    >
-                        Manage Products
+                <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+                    <Typography variant="h5" sx={{ mb: 3, color: '#2193b0', fontWeight: 600, textAlign: 'center' }}>
+                        Product Management
                     </Typography>
-                    
-                    <TableContainer sx={{ 
-                        maxHeight: 'calc(80vh - 100px)',
-                        overflowY: 'auto',
-                        '&::-webkit-scrollbar': {
-                            width: '8px'
-                        },
-                        '&::-webkit-scrollbar-track': {
-                            background: '#f1f1f1',
-                            borderRadius: '4px'
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                            background: '#2193b0',
-                            borderRadius: '4px',
-                            '&:hover': {
-                                background: '#1c7a94'
-                            }
-                        }
-                    }}>
-                        <Table stickyHeader>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Product Name</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Category</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Price</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Description</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {products.map((product) => (
-                                    <TableRow 
-                                        key={product._id}
-                                        sx={{
-                                            transition: 'all 0.3s ease',
-                                            '&:hover': {
-                                                backgroundColor: 'rgba(33, 147, 176, 0.1)'
-                                            }
-                                        }}
-                                    >
-                                        <TableCell>{product.productName}</TableCell>
-                                        <TableCell>{product.category}</TableCell>
-                                        <TableCell>₹{product.price?.toLocaleString()}</TableCell>
-                                        <TableCell>{product.description}</TableCell>
-                                        <TableCell>
-                                            <Button
-                                                variant="contained"
-                                                color="error"
-                                                startIcon={<DeleteIcon />}
-                                                onClick={() => handleDeleteClick(product)}
-                                                sx={{
-                                                    textTransform: 'none',
-                                                    boxShadow: 'none'
-                                                }}
-                                            >
-                                                Delete
-                                            </Button>
-                                        </TableCell>
+
+                    {loading ? (
+                        <Box display="flex" justifyContent="center" p={3}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <TableContainer>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>Product Image</TableCell>
+                                        <TableCell>Name</TableCell>
+                                        <TableCell>Category</TableCell>
+                                        <TableCell>Price</TableCell>
+                                        <TableCell>Description</TableCell>
+                                        <TableCell>Actions</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {products.map((product) => (
+                                        <TableRow key={product._id}>
+                                            <TableCell>
+                                                {product.images && product.images[0] && (
+                                                    <img
+                                                        src={`https://boldservebackend-production.up.railway.app${product.images[0]}`}
+                                                        alt={product.name}
+                                                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                                        onError={(e) => {
+                                                            e.target.src = 'https://via.placeholder.com/50';
+                                                        }}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell>{product.productName}</TableCell>
+                                            <TableCell>{product.category}</TableCell>
+                                            <TableCell>₹{product.price}</TableCell>
+                                            <TableCell>{product.description}</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="contained"
+                                                    color="error"
+                                                    startIcon={<DeleteIcon />}
+                                                    onClick={() => handleDeleteClick(product)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
                 </Paper>
 
-                {/* Delete Confirmation Dialog */}
-                <Dialog
-                    open={deleteDialogOpen}
-                    onClose={() => setDeleteDialogOpen(false)}
+                <Dialog 
+                    open={deleteDialogOpen} 
+                    onClose={() => !loading && setDeleteDialogOpen(false)}
                 >
-                    <DialogTitle>Confirm Delete</DialogTitle>
+                    <DialogTitle>Delete Product</DialogTitle>
                     <DialogContent>
                         <DialogContentText>
-                            Are you sure you want to delete {selectedProduct?.productName}? This action cannot be undone.
+                            Are you sure you want to delete "{selectedProduct?.productName}"?
+                            <br />
+                            Product ID: {selectedProduct?._id}
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+                        <Button 
+                            onClick={() => setDeleteDialogOpen(false)}
+                            disabled={loading}
+                        >
                             Cancel
                         </Button>
-                        <Button onClick={handleDelete} color="error" variant="contained">
-                            Delete
+                        <Button 
+                            onClick={handleDelete} 
+                            color="error" 
+                            variant="contained"
+                            disabled={loading}
+                        >
+                            {loading ? 'Deleting...' : 'Delete'}
                         </Button>
                     </DialogActions>
                 </Dialog>
 
-                {/* Success Snackbar */}
                 <Snackbar
-                    open={success}
+                    open={success || !!error}
                     autoHideDuration={6000}
-                    onClose={() => setSuccess(false)}
+                    onClose={() => {
+                        setSuccess(false);
+                        setError(null);
+                    }}
                     anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
                 >
-                    <Typography 
-                        sx={{ 
-                            bgcolor: 'success.main',
+                    <Paper
+                        sx={{
+                            padding: '12px 24px',
+                            backgroundColor: success ? 'success.main' : 'error.main',
                             color: 'white',
-                            p: 2,
-                            borderRadius: 1
                         }}
                     >
-                        {successMessage}
-                    </Typography>
-                </Snackbar>
-
-                {/* Error Snackbar */}
-                {error && (
-                    <Snackbar
-                        open={!!error}
-                        autoHideDuration={6000}
-                        onClose={() => setError(null)}
-                        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                    >
-                        <Typography 
-                            sx={{ 
-                                bgcolor: 'error.main',
-                                color: 'white',
-                                p: 2,
-                                borderRadius: 1
-                            }}
-                        >
-                            {error}
+                        <Typography>
+                            {success ? successMessage : error}
                         </Typography>
-                    </Snackbar>
-                )}
+                    </Paper>
+                </Snackbar>
             </Container>
         </Box>
     );

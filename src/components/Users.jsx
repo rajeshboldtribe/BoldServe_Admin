@@ -14,15 +14,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: 'https://boldservebackend-production.up.railway.app',
-  timeout: 10000,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json'
-  }
-});
+const API_URL = 'https://boldservebackend-production.up.railway.app';
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -33,43 +25,18 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        setError(null);
-
-        // Get token from localStorage if it exists
-        const token = localStorage.getItem('token');
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await api.get('/api/users');
-        console.log('API Response:', response.data);
-
-        if (response.data && Array.isArray(response.data)) {
-          setUsers(response.data);
-        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        const response = await axios.get(`${API_URL}/api/users`);
+        
+        // Handle the specific response structure from your API
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
           setUsers(response.data.data);
+          console.log('Users loaded:', response.data.data);
         } else {
           throw new Error('Invalid data format received');
         }
-
       } catch (error) {
-        console.error('API Error:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
-        
-        if (error.response?.status === 401) {
-          setError('Authentication required. Please login again.');
-        } else if (error.response?.status === 403) {
-          setError('You do not have permission to view this data.');
-        } else if (error.code === 'ECONNABORTED') {
-          setError('Request timed out. Please check your connection.');
-        } else {
-          setError('Unable to load user data. Please try again.');
-        }
-        
-        setUsers([]);
+        console.error('Error fetching users:', error);
+        setError(error.message || 'Failed to load users');
       } finally {
         setLoading(false);
       }
@@ -78,55 +45,27 @@ const Users = () => {
     fetchUsers();
   }, []);
 
-  // Loading state
   if (loading) {
     return (
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
-        height: '100%',
-        width: '100%',
-        mt: 8
+        height: '100vh'
       }}>
         <CircularProgress />
       </Box>
     );
   }
 
-  // Main component render
   return (
     <Box sx={{
       width: '100%',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      marginLeft: '120px',
-      mt: -4
+      p: 3,
+      marginLeft: '240px'
     }}>
-      <Container maxWidth="lg" sx={{ 
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%'
-      }}>
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 3, 
-            borderRadius: 2, 
-            width: '100%',
-            maxWidth: '1000px',
-            mx: 'auto',
-            overflow: 'hidden',
-            maxHeight: '600px'
-          }}
-        >
+      <Container maxWidth="lg">
+        <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
           <Typography 
             variant="h5" 
             sx={{ 
@@ -139,64 +78,42 @@ const Users = () => {
             Registered Users
           </Typography>
           
-          <TableContainer sx={{ 
-            maxHeight: '450px',
-            overflowY: 'auto',
-            '&::-webkit-scrollbar': {
-              width: '8px'
-            },
-            '&::-webkit-scrollbar-track': {
-              background: '#f1f1f1',
-              borderRadius: '4px'
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: '#2193b0',
-              borderRadius: '4px',
-              '&:hover': {
-                background: '#1c7a94'
-              }
-            }
-          }}>
-            <Table stickyHeader>
+          <TableContainer>
+            <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Mobile</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', background: '#f5f5f5' }}>Address</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Mobile</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Address</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {users && users.length > 0 ? (
-                  users.map((user, index) => (
+                {users.length > 0 ? (
+                  users.map((user) => (
                     <TableRow 
-                      key={user._id || index}
+                      key={user._id}
                       sx={{
-                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: 'rgba(33, 147, 176, 0.1)',
-                          transform: 'scale(1.01)'
+                          backgroundColor: 'rgba(33, 147, 176, 0.1)'
                         }
                       }}
                     >
-                      <TableCell>{user.fullName || 'N/A'}</TableCell>
-                      <TableCell>{user.email || 'N/A'}</TableCell>
-                      <TableCell>{user.mobile || 'N/A'}</TableCell>
-                      <TableCell>{user.address || 'N/A'}</TableCell>
+                      <TableCell>{user._id}</TableCell>
+                      <TableCell>{user.fullName}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.mobile}</TableCell>
+                      <TableCell>{user.address || 'Not provided'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">
+                    <TableCell colSpan={5} align="center">
                       {error ? (
-                        <Box>
-                          <Typography color="error" gutterBottom>
-                            {error}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            Please try refreshing the page or contact support if the issue persists.
-                          </Typography>
-                        </Box>
+                        <Typography color="error">
+                          {error}
+                        </Typography>
                       ) : (
                         'No users found'
                       )}

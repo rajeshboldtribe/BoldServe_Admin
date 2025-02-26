@@ -68,8 +68,7 @@ const Services = () => {
     offers: '',
     review: '',
     rating: '',
-    images: new Array(6).fill(null), // Changed to 6 slots
-    imageUrl: ''
+    images: new Array(6).fill(null)
   });
 
   const [snackbar, setSnackbar] = useState({
@@ -119,26 +118,41 @@ const Services = () => {
     setError(null);
     
     try {
-      // Match the exact API data structure
-      const serviceData = {
-        name: formData.productName,           // Required field from API
-        productName: formData.productName,    // Same as name
-        category: formData.category,
-        subCategory: "Adhesive & Glue",       // Required field
-        price: Number(formData.price),
-        description: formData.description,
-        offers: "0",                          // Required field
-        review: "0",                          // Required field
-        rating: 0,                            // Required field
-        images: [formData.imageUrl],          // Array format required
-        isAvailable: true,                    // Required field
-        duration: 0                           // Required field
-      };
-
-      const response = await axios.post('/api/services', serviceData);
+      // Create FormData object to handle file uploads
+      const formDataToSend = new FormData();
       
-      if (response.data) {
-        console.log('Service created:', response.data);
+      // Add all the text fields
+      formDataToSend.append('productName', formData.productName);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('subCategory', formData.subCategory);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('offers', formData.offers || '0');
+      formDataToSend.append('review', formData.review || '0');
+      formDataToSend.append('rating', formData.rating || '0');
+      formDataToSend.append('duration', '0');
+      formDataToSend.append('name', formData.productName); // Required by API
+
+      // Add images
+      formData.images.forEach((image, index) => {
+        if (image) {
+          formDataToSend.append('images', image);
+        }
+      });
+
+      const response = await fetch('https://boldservebackend-production.up.railway.app/api/services', {
+        method: 'POST',
+        body: formDataToSend,
+        // Don't set Content-Type header - let the browser set it with boundary for FormData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
         setSuccess(true);
         // Reset form
         setFormData({
@@ -146,16 +160,20 @@ const Services = () => {
           description: '',
           price: '',
           category: '',
-          imageUrl: ''
+          subCategory: '',
+          offers: '',
+          review: '',
+          rating: '',
+          images: new Array(6).fill(null)
         });
+        console.log('Service created successfully:', result);
+      } else {
+        throw new Error(result.message || 'Failed to create service');
       }
+
     } catch (error) {
-      console.error('Error creating service:', {
-        message: error.message,
-        response: error.response?.data,
-        data: error.response?.data
-      });
-      setError('Failed to create service. Please try again.');
+      console.error('Error creating service:', error);
+      setError(error.message || 'Failed to create service. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -348,20 +366,9 @@ const Services = () => {
               </Grid>
 
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Image URL"
-                  sx={{ mb: 2 }}
-                  value={formData.imageUrl}
-                  onChange={handleChange}
-                  name="imageUrl"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    Upload Additional Images (Max 6)
+                    Upload Images (Max 6)
                   </Typography>
                   
                   <Grid container spacing={2}>
